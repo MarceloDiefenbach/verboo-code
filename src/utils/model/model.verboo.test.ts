@@ -21,6 +21,8 @@ async function importFreshModelModule(
   }))
   mock.module('../../services/api/verbooModels.js', () => ({
     getCachedVerbooModels: () => models,
+    getVerbooModelMeta: (modelId: string) =>
+      models.find(model => model.id === modelId),
   }))
   const nonce = `${Date.now()}-${Math.random()}`
   return import(`./model.js?ts=${nonce}`)

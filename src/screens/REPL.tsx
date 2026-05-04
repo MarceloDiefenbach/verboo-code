@@ -169,6 +169,7 @@ import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js';
 import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils.js';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent.js';
 import { useMainLoopModel } from '../hooks/useMainLoopModel.js';
+import { streamingMetricsRef } from '../hooks/useTokenRate.js';
 import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState.js';
 import type { ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 import type { ProcessUserInputContext } from '../utils/processUserInput/processUserInput.js';
@@ -1483,6 +1484,13 @@ export function REPL({
         const lastEntry = entries.at(-1)!;
         lastEntry.lastTokenTime = Date.now();
         lastEntry.endResponseLength = responseLengthRef.current;
+        streamingMetricsRef.current = {
+          responseLength: responseLengthRef.current,
+          baselineLength: lastEntry.responseLengthBaseline,
+          firstTokenTime: lastEntry.firstTokenTime,
+          lastTokenTime: lastEntry.lastTokenTime,
+          isStreaming: true
+        };
       }
     }
   }, []);
@@ -1612,6 +1620,8 @@ export function REPL({
     setSpinnerShimmerColor(null);
     pickNewSpinnerTip();
     endInteractionSpan();
+    // Finaliza streaming metrics
+    streamingMetricsRef.current.isStreaming = false;
     // Speculative bash classifier checks are only valid for the current
     // turn's commands — clear after each turn to avoid accumulating
     // Promise chains for unconsumed checks (denied/aborted paths).
@@ -2526,6 +2536,14 @@ export function REPL({
           responseLengthBaseline: baseline,
           endResponseLength: baseline
         });
+        // Inicia streaming metrics
+        streamingMetricsRef.current = {
+          responseLength: baseline,
+          baselineLength: baseline,
+          firstTokenTime: now,
+          lastTokenTime: now,
+          isStreaming: true
+        };
       } : undefined,
       setStreamMode,
       onCompactProgress: event => {

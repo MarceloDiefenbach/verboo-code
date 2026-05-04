@@ -45,33 +45,35 @@ export function ContextWindowDisplay({ messages, permissionMode }: {
   const windowSize = getContextWindowForModel(runtimeModel, getSdkBetas());
   const { avgRate10s, isGenerating } = useTokenRateDetailed(messages);
 
+  const emptyBar = '░'.repeat(BAR_WIDTH);
+  const windowK = formatNumber(windowSize);
+
+  // Durante streaming, mostra a taxa de tokens/s
+  const rateText = isGenerating ? `${Math.round(avgRate10s)} tok/s` : '0 tok/s';
+  const rateColor = isGenerating ? 'success' : undefined;
+
   if (!usage) {
-    const emptyBar = '░'.repeat(BAR_WIDTH);
-    const windowK = formatNumber(windowSize);
     return (
       <Box flexDirection="row" gap={2}>
         <Text dimColor>ctx [{emptyBar}] 0/{windowK}  0%</Text>
-        <Text dimColor color="success">0 tok/s</Text>
+        <Text dimColor color={rateColor}>{rateText}</Text>
       </Box>
     );
   }
+
   const { used } = calculateContextPercentages(usage, windowSize);
   const pct = Math.round(used);
   const filled = Math.round((pct / 100) * BAR_WIDTH);
   const bar = '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled);
   const color = pct >= 90 ? 'red' : pct >= 70 ? 'yellow' : undefined;
   const inputK = formatNumber(usage.input_tokens);
-  const windowK = formatNumber(windowSize);
-  const rateColor = isGenerating ? 'success' : undefined;
-  const rateText = isGenerating ? `${Math.round(avgRate10s)} tok/s` : '';
+
   return (
     <Box flexDirection="row" gap={2}>
       <Text dimColor color={color}>
         ctx [{bar}] {inputK}/{windowK}  {pct}%
       </Text>
-      {rateText && (
-        <Text dimColor color={rateColor}>{rateText}</Text>
-      )}
+      <Text dimColor color={rateColor}>{rateText}</Text>
     </Box>
   );
 }

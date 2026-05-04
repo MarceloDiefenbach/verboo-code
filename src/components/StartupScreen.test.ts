@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { VERBOO_ROUTER_URL } from '../constants/oauth.js'
-import { saveGlobalConfig } from '../utils/config.js'
+import {
+  resetSettingsCache,
+  setSessionSettingsCache,
+} from '../utils/settings/settingsCache.js'
 
 const ENV_KEYS = [
   'CLAUDE_CODE_USE_OPENAI',
@@ -28,13 +31,18 @@ async function importStartupScreenWithModels(
   settingsModel?: string,
 ) {
   mock.restore()
-  saveGlobalConfig(current => ({ ...current, model: settingsModel }))
+  setSessionSettingsCache({
+    settings: settingsModel ? { model: settingsModel } : {},
+    errors: [],
+  })
   mock.module('../constants/oauth.js', () => ({
     VERBOO_ROUTER_URL,
     isVerbooMode: () => true,
   }))
   mock.module('../services/api/verbooModels.js', () => ({
     getCachedVerbooModels: () => models,
+    getVerbooModelMeta: (modelId: string) =>
+      models.find(model => model.id === modelId),
   }))
   const nonce = `${Date.now()}-${Math.random()}`
   return import(`./StartupScreen.js?ts=${nonce}`)
@@ -42,7 +50,7 @@ async function importStartupScreenWithModels(
 
 beforeEach(() => {
   mock.restore()
-  saveGlobalConfig(current => ({ ...current, model: undefined }))
+  resetSettingsCache()
   for (const key of ENV_KEYS) {
     originalEnv[key] = process.env[key]
     delete process.env[key]
@@ -51,7 +59,7 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restore()
-  saveGlobalConfig(current => ({ ...current, model: undefined }))
+  resetSettingsCache()
   for (const key of ENV_KEYS) {
     if (originalEnv[key] === undefined) {
       delete process.env[key]
