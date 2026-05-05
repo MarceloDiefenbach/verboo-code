@@ -155,7 +155,7 @@ const externalTips: Tip[] = [
     },
   },
   {
-    id: 'color-when-multi-clauding',
+    id: 'color-when-multi-scaring',
     content: async () =>
       'Running multiple Verboo Code sessions? Use /color and /rename to tell them apart at a glance.',
     cooldownSessions: 10,

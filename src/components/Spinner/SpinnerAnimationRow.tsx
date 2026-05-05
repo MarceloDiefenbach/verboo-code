@@ -179,7 +179,7 @@ export function SpinnerAnimationRow({
   const sep = SEP_WIDTH;
   const wantsThinking = thinkingStatus !== null;
   const wantsTimerAndTokens = verbose || hasRunningTeammates || effectiveElapsedMs > SHOW_TOKENS_AFTER_MS;
-  const availableSpace = columns - messageWidth - 5;
+  const availableSpace = columns - messageWidth - 6;
   let showThinking = wantsThinking && availableSpace > thinkingWidthValue;
   if (!showThinking && wantsThinking && thinkingStatus === 'thinking' && effortSuffix) {
     if (availableSpace > THINKING_BARE_WIDTH) {
@@ -226,7 +226,7 @@ export function SpinnerAnimationRow({
           <Text dimColor>)</Text>
         </> : null;
   return <FullWidthRow>
-      <Box ref={viewportRef} flexDirection="row" flexWrap="wrap" marginTop={1}>
+      <Box ref={viewportRef} flexDirection="row" flexWrap="nowrap" marginTop={1}>
         <SpinnerGlyph frame={frame} messageColor={messageColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} reducedMotion={reducedMotion} time={time} />
         <GlimmerMessage message={message} mode={mode} messageColor={messageColor} glimmerIndex={glimmerIndex} flashOpacity={flashOpacity} shimmerColor={shimmerColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} />
         {status}

@@ -476,7 +476,7 @@ function rewriteMainScreenFrame(
   return [...diff, ...screen.diff]
 }
 
-const MAX_MAIN_SCREEN_REWRITE_ROWS = 6
+const MAX_MAIN_SCREEN_REWRITE_ROWS = 15
 
 function findMainScreenRewriteStart(prev: Screen, next: Screen): number | null {
   const commonHeight = Math.min(prev.height, next.height)

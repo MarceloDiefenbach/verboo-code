@@ -266,7 +266,12 @@ function getInitialState(): State {
     typeof process.cwd === 'function' &&
     typeof realpathSync === 'function'
   ) {
-    const rawCwd = cwd()
+    let rawCwd = ''
+    try {
+      rawCwd = cwd()
+    } catch {
+      // cwd() throws (uv_cwd / ENOENT) when the current directory was deleted
+    }
     try {
       resolvedCwd = realpathSync(rawCwd).normalize('NFC')
     } catch {

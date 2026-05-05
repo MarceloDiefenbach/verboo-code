@@ -25,6 +25,7 @@
  *   OPENAI_MODEL                     — optional; use github:copilot or openai/gpt-4.1 style IDs
  */
 
+import { randomUUID } from 'crypto'
 import { APIError } from '@anthropic-ai/sdk'
 import {
   readCodexCredentialsAsync,
@@ -559,7 +560,7 @@ function convertMessages(
                 extra_content?: Record<string, unknown>
                 signature?: string
               }) => {
-                const id = tu.id ?? `call_${crypto.randomUUID().replace(/-/g, '')}`
+                const id = tu.id ?? `call_${randomUUID().replace(/-/g, '')}`
 
                 // Only keep tool calls that have a corresponding result in the history,
                 // or if it's the last message (prefill scenario).
@@ -850,7 +851,7 @@ interface OpenAIStreamChunk {
 }
 
 function makeMessageId(): string {
-  return `msg_${crypto.randomUUID().replace(/-/g, '')}`
+  return `msg_${randomUUID().replace(/-/g, '')}`
 }
 
 function convertChunkUsage(
