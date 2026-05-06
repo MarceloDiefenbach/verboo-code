@@ -152,7 +152,7 @@ export async function update() {
         writeToStdout('To update, run:\n')
         writeToStdout(chalk.bold('  brew upgrade verboo-code') + '\n')
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('Verboo Code is up to date!\n')
       }
     } else if (packageManager === 'winget') {
       writeToStdout('Verboo Code is managed by winget.\n')
@@ -165,7 +165,7 @@ export async function update() {
           chalk.bold('  winget upgrade Anthropic.ClaudeCode') + '\n',
         )
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('Verboo Code is up to date!\n')
       }
     } else if (packageManager === 'apk') {
       writeToStdout('Verboo Code is managed by apk.\n')
@@ -176,7 +176,7 @@ export async function update() {
         writeToStdout('To update, run:\n')
         writeToStdout(chalk.bold('  apk upgrade verboo-code') + '\n')
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('Verboo Code is up to date!\n')
       }
     } else {
       // pacman, deb, and rpm don't get specific commands because they each have
