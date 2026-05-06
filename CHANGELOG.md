@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.8.0](https://github.com/verbeux-ai/code/compare/v0.7.27...v0.8.0) (2026-05-06)
+
+### Novidades
+
+* **context:** particionamento de contexto e pruning por relevância — compactação mais inteligente que preserva o que importa ([#849](https://github.com/verbeux-ai/code/issues/849))
+* **raciocínio:** suporte a `xhigh` como nível de esforço de raciocínio e forwarding de `reasoning_effort` para chat completions ([#857](https://github.com/verbeux-ai/code/issues/857))
+* **subagentes:** agente principal agora aguarda o resultado do subagente antes de continuar ([#1032](https://github.com/verbeux-ai/code/issues/1032))
+* **ripgrep:** cadeia de resolução aprimorada — fallback npm, modo embedded em builds compilados
+* **config:** suporte a múltiplos diretórios de projeto (`.verboo/`, `.claude/`) no `markdownConfigLoader`
+* **skills:** novas skills built-in `karpathy-guidelines` (opt-in) e `statusline-setup`
+
+### Correções
+
+* **router:** strip de `x-anthropic-billing-header` no shim OpenAI — reduz desperdício de tokens ([#1019](https://github.com/verbeux-ai/code/issues/1019))
+* **cli:** substituição de `createRequire` por import estático em `teammate.js` ([#1026](https://github.com/verbeux-ai/code/issues/1026))
+* **testes:** resolução de instabilidade por vazamento de estado de módulo entre testes
+* **tema:** remoção de wrappers de memo obsoletos nos hooks de contexto de tema
+
+### Infraestrutura
+
+* Node.js >=22 obrigatório — alinhamento com dependências de runtime
+* Renomeação completa `openclaude` → `verboo` em URLs, strings de display e fixtures de teste
+* Extração de `streamingMetricsRef` para módulo sem dependências React (evita leak no SDK bundle)
+
 ## [0.9.2](https://github.com/Gitlawb/openclaude/compare/v0.9.1...v0.9.2) (2026-05-06)
 
 
