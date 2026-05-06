@@ -1,26 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { streamingMetricsRef } from './streamingMetrics.js'
 
-/**
- * Ref compartilhado que o REPL atualiza durante o streaming.
- * O hook lê este ref a cada polling cycle.
- */
-export interface StreamingMetrics {
-  responseLength: number
-  baselineLength: number
-  firstTokenTime: number
-  lastTokenTime: number
-  isStreaming: boolean
-}
-
-export const streamingMetricsRef: { current: StreamingMetrics } = {
-  current: {
-    responseLength: 0,
-    baselineLength: 0,
-    firstTokenTime: 0,
-    lastTokenTime: 0,
-    isStreaming: false
-  }
-}
+export type { StreamingMetrics } from './streamingMetrics.js'
+export { streamingMetricsRef } from './streamingMetrics.js'
 
 /**
  * Hook que calcula a taxa de tokens/s de output do modelo em tempo real.

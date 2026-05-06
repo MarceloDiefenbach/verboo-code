@@ -20,7 +20,7 @@ import type {
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { randomUUID } from 'crypto'
-import { streamingMetricsRef } from '../../hooks/useTokenRate.js'
+import { streamingMetricsRef } from '../../hooks/streamingMetrics.js'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
