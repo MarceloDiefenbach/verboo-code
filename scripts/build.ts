@@ -56,7 +56,7 @@ const featureFlags: Record<string, boolean> = {
   QUICK_SEARCH: true,                 // Ctrl+G quick search across prompts
   SHOT_STATS: true,                   // Shot distribution stats in session summary
   EXTRACT_MEMORIES: true,             // Auto-extract durable memories from conversations
-  FORK_SUBAGENT: true,                // Implicit context-forking when omitting subagent_type
+  FORK_SUBAGENT: false,               // Disabled: commands/fork/index.ts not mirrored in this repo
   VERIFICATION_AGENT: true,           // Built-in read-only agent for test/verification
   PROMPT_CACHE_BREAK_DETECTION: true, // Detect & log unexpected prompt cache invalidations
   HOOK_PROMPTS: true,                 // Allow tools to request interactive user prompts
@@ -420,13 +420,28 @@ export const SeverityNumber = {};
         }
         scanForMissingImports()
 
-        // Register exact-match resolvers for each missing module
+        // Register exact-match resolvers for each missing module.
+        // For relative imports, check if the TS file actually exists at
+        // the specific import site before stubbing — this prevents the
+        // global stub from shadowing valid imports that happen to share
+        // the same relative specifier (e.g. ./dream.js exists in
+        // commands/dream/ but not in skills/bundled/).
         for (const mod of missingModules) {
           const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-          build.onResolve({ filter: new RegExp(`^${escaped}$`) }, () => ({
-            path: mod,
-            namespace: 'missing-module-stub',
-          }))
+          build.onResolve({ filter: new RegExp(`^${escaped}$`) }, (args) => {
+            if (mod.startsWith('./') || mod.startsWith('../')) {
+              const dir = pathMod.dirname(args.importer)
+              const resolved = pathMod.resolve(dir, mod)
+              if (
+                fs.existsSync(resolved) ||
+                fs.existsSync(resolved.replace(/\.js$/, '.ts')) ||
+                fs.existsSync(resolved.replace(/\.js$/, '.tsx'))
+              ) {
+                return null // let Bun resolve the real TS file
+              }
+            }
+            return { path: mod, namespace: 'missing-module-stub' }
+          })
         }
 
         build.onLoad(

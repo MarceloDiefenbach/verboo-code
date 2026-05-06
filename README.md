@@ -10,7 +10,7 @@ Verboo Code is the coding-agent CLI for the [Verboo platform](https://code.verbo
 
 Verboo Code is a fork of [Claude Code](https://github.com/anthropics/claude-code), maintained by the Verboo team.
 
-[Quick Start](#quick-start) | [What Works](#what-works) | [gRPC Server](#headless-grpc-server) | [VS Code Extension](#vs-code-extension) | [Source Build](#source-build-and-local-development) | [Community](#community)
+[Quick Start](#quick-start) | [What Works](#what-works) | [gRPC Server](#headless-grpc-server) | [Source Build](#source-build-and-local-development) | [Community](#community)
 
 ## Quick Start
 
@@ -161,10 +161,6 @@ Coverage output is written to `coverage/lcov.info`, and Verboo Code also generat
 - `vscode-extension/verboo-vscode/` - VS Code extension
 - `.github/` - repo automation, templates, and CI configuration
 - `bin/` - CLI launcher entrypoints
-
-## VS Code Extension
-
-The repo includes a VS Code extension in [`vscode-extension/verboo-vscode`](vscode-extension/verboo-vscode) for Verboo Code launch integration, provider-aware control-center UI, and theme support.
 
 ## Security
 
