@@ -47,7 +47,6 @@ import {
 import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, join, relative, resolve, sep } from 'path'
 import { getInlinePlugins } from '../../bootstrap/state.js'
-import { isVerbooMode } from '../../constants/oauth.js'
 import {
   BUILTIN_MARKETPLACE_NAME,
   getBuiltinPlugins,
@@ -3351,14 +3350,17 @@ export function cachePluginSettings(plugins: LoadedPlugin[]): void {
   }
 }
 
+// Plugins externos são habilitados por default (alinhado com Claude Code).
+// Opt-out explícito via VERBOO_DISABLE_PLUGINS=1 para casos onde se quer
+// rodar verboo sem nenhum plugin externo (sandboxing, debugging).
 export function areExternalPluginsDisabledForVerboo(): boolean {
-  return isVerbooMode() && !isEnvTruthy(process.env.VERBOO_ENABLE_PLUGINS)
+  return isEnvTruthy(process.env.VERBOO_DISABLE_PLUGINS)
 }
 
 function getEmptyPluginLoadResultForVerboo(): PluginLoadResult {
   cachePluginSettings([])
   logForDebugging(
-    'Verboo mode: external plugins disabled (set VERBOO_ENABLE_PLUGINS=1 to opt in)',
+    'External plugins disabled via VERBOO_DISABLE_PLUGINS=1',
   )
   return { enabled: [], disabled: [], errors: [] }
 }
