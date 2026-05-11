@@ -1525,6 +1525,49 @@ async function* queryLoop(
         }
       }
 
+      // [DIAGNOSTIC — Fase 1] Capturar texto/sinais quando cai aqui sem nudge.
+      // Remover ou rebaixar para 'debug' após confirmar a causa do silent stop.
+      {
+        const lastAssistantForDiag = assistantMessages.at(-1)
+        const lastTextForDiag =
+          lastAssistantForDiag?.type === 'assistant'
+            ? lastAssistantForDiag.message.content
+                .filter(
+                  (b): b is { type: 'text'; text: string } => b.type === 'text',
+                )
+                .map(b => b.text)
+                .join(' ')
+            : ''
+        const lastTextLower = lastTextForDiag.toLowerCase()
+        const completionMarkersDiag =
+          /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if)\b/
+        const continuationSignalsDiag = [
+          /\bso now (i|let me|we) (need to|have to|should|must|will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up)\b/,
+          /\bnow i('ll| will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|go|proceed)\b/,
+          /\blet me (go ahead and |now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|proceed)\b/,
+          /\b(i('ll| will| need to| have to| must) (now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up))\b/,
+          /\btime to (do|create|write|edit|update|fix|implement|add|run|check|make|build|get started|begin)\b/,
+          /\bnext,?\s+(i('ll| will)|let me|i need to) (do|create|write|edit|update|fix|implement|add|run|check|make|build)\b/,
+        ]
+        logForDebugging(
+          JSON.stringify({
+            type: 'silent_stop_diagnostic',
+            turnCount,
+            continuationNudgeCount: state.continuationNudgeCount,
+            maxContinuationNudges: MAX_CONTINUATION_NUDGES,
+            assistantMessagesCount: assistantMessages.length,
+            hasAssistantText: lastTextForDiag.length > 0,
+            textLength: lastTextForDiag.length,
+            textPreview: lastTextForDiag.slice(-500),
+            matchedCompletionMarker: completionMarkersDiag.test(lastTextLower),
+            matchedContinuationSignal: continuationSignalsDiag.some(re =>
+              re.test(lastTextLower),
+            ),
+          }),
+          { level: 'warn' },
+        )
+      }
+
       return { reason: 'completed' }
     }
 
