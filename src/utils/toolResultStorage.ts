@@ -17,6 +17,7 @@ import { logEvent } from '../services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../services/analytics/metadata.js'
 import type { Message } from '../types/message.js'
 import { logForDebugging } from './debug.js'
+import { isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, toError } from './errors.js'
 import { formatFileSize } from './format.js'
 import { logError } from './log.js'
@@ -448,11 +449,18 @@ export function provisionContentReplacementState(
   initialMessages?: Message[],
   initialContentReplacements?: ContentReplacementRecord[],
 ): ContentReplacementState | undefined {
-  const enabled = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_hawthorn_steeple',
-    false,
-  )
-  if (!enabled) return undefined
+  // VERBOO-BRAND: Upstream gates this on the GrowthBook flag
+  // `tengu_hawthorn_steeple`, which always resolves to its default
+  // (false) in this fork because telemetry is disabled in
+  // services/analytics/config.ts. Without the budget enforcement, the
+  // raw toolUseResult payload is never dropped from in-memory Messages
+  // and long sessions accumulate hundreds of MB to multiple GB of
+  // retained tool output. Enable by default; offer an explicit
+  // opt-out for the rare case it interferes with prompt cache / resume.
+  const disabled =
+    isEnvTruthy(process.env.VERBOO_DISABLE_TOOL_RESULT_BUDGET) ||
+    isEnvTruthy(process.env.OPENCLAUDE_DISABLE_TOOL_RESULT_BUDGET)
+  if (disabled) return undefined
   if (initialMessages) {
     return reconstructContentReplacementState(
       initialMessages,
