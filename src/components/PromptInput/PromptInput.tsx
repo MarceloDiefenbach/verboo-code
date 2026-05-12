@@ -2024,7 +2024,7 @@ function PromptInput({
     columns,
     rows
   } = useTerminalSize();
-  const textInputColumns = columns - 3 - companionReservedColumns(columns, companionSpeaking);
+  const textInputColumns = columns - 5 - companionReservedColumns(columns, companionSpeaking);
 
   // POC: click-to-position-cursor. Mouse tracking is only enabled inside
   // <AlternateScreen>, so this is dormant in the normal main-screen REPL.
@@ -2306,20 +2306,16 @@ function PromptInput({
             </Box>
           </Box>
           <Text color={swarmBanner.bgColor}>{'─'.repeat(columns)}</Text>
-        </> : <Box flexDirection="column" width="100%">
-          {/* VERBOO-BRAND: input frame uses the active theme's userMessageBackground
-              (cinza claro em light, cinza médio em dark) — the upstream "rgb(45,45,45)"
-              was hardcoded for dark mode and produced an unreadable black band over
-              the prompt in light themes. */}
-          <Text color="userMessageBackground">{'▄'.repeat(columns)}</Text>
-          <Box flexDirection="row" alignItems="flex-start" justifyContent="flex-start" backgroundColor="userMessageBackground">
-            <PromptInputModeIndicator mode={mode} isLoading={isLoading} viewingAgentName={viewingAgentName} viewingAgentColor={viewingAgentColor} />
-            {showFastIcon && <Text color={getBorderColor()}>{' '}{getFastIconString(true, fastModeCooldown)}{' '}{showFastIconHint && <Text dimColor>/fast</Text>}</Text>}
-            <Box flexGrow={1} flexShrink={1} onClick={handleInputClick}>
-              {textInputElement}
+        </> : <Box width="100%">
+          <Box borderStyle="round" borderColor={getBorderColor()} paddingLeft={1} width="100%">
+            <Box flexDirection="row" alignItems="flex-start" justifyContent="flex-start">
+              <PromptInputModeIndicator mode={mode} isLoading={isLoading} viewingAgentName={viewingAgentName} viewingAgentColor={viewingAgentColor} />
+              {showFastIcon && <Text color={getBorderColor()}>{' '}{getFastIconString(true, fastModeCooldown)}{' '}{showFastIconHint && <Text dimColor>/fast</Text>}</Text>}
+              <Box flexGrow={1} flexShrink={1} onClick={handleInputClick}>
+                {textInputElement}
+              </Box>
             </Box>
           </Box>
-          <Text color="userMessageBackground">{'▀'.repeat(columns)}</Text>
         </Box>}
       <PromptInputFooter apiKeyStatus={apiKeyStatus} debug={debug} exitMessage={exitMessage} vimMode={isVimModeEnabled() ? vimMode : undefined} mode={mode} autoUpdaterResult={autoUpdaterResult} isAutoUpdating={isAutoUpdating} verbose={verbose} onAutoUpdaterResult={onAutoUpdaterResult} onChangeIsUpdating={setIsAutoUpdating} suggestions={suggestions} selectedSuggestion={selectedSuggestion} maxColumnWidth={maxColumnWidth} toolPermissionContext={effectiveToolPermissionContext} helpOpen={helpOpen} suppressHint={input.length > 0} isLoading={isLoading} tasksSelected={tasksSelected} teamsSelected={teamsSelected} bridgeSelected={bridgeSelected} tmuxSelected={tmuxSelected} teammateFooterIndex={teammateFooterIndex} ideSelection={ideSelection} mcpClients={mcpClients} isPasting={isPasting} isInputWrapped={isInputWrapped} messages={messages} isSearching={isSearchingHistory} historyQuery={historyQuery} setHistoryQuery={setHistoryQuery} historyFailedMatch={historyFailedMatch} onOpenTasksDialog={isFullscreenEnvEnabled() ? handleOpenTasksDialog : undefined} />
       {isFullscreenEnvEnabled() ? null : autoModeOptInDialog}
