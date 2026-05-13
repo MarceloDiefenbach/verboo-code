@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.8](https://github.com/verbeux-ai/code/compare/v0.8.7...v0.8.8) (2026-05-13)
+
+### Correções
+
+* **query:** parada silenciosa do agente em sessões pt-br — `continuationSignals` em inglês não casava com respostas em português e o loop encerrava sem aviso. Agora o nudge é o caminho padrão sempre que há texto sem `tool_use`, e `completionMarkers` reconhece marcadores pt-br (`pronto`, `concluído`, `finalizado`, etc.). Cap de `MAX_CONTINUATION_NUDGES = 3` continua segurando loops fechados.
+* **ui:** barra de contexto inconsistente — número exibido (`572/262.1k`) e percentual (`15%`) agora usam o mesmo numerador (`input_tokens`). Antes o percentual somava `cache_creation` + `cache_read` enquanto o número mostrava só `input_tokens`.
+* **autoupdater:** notificação de update que nunca aparecia — `useUpdateNotification` usava o padrão setState-durante-render com retorno derivado, e o React descartava o JSX da primeira passada. Notificação agora é armazenada em state separado e persiste no commit. Default de `initialVersion` trocado de `MACRO.VERSION` (= `99.0.0` em verboo) para `MACRO.DISPLAY_VERSION`.
+* **autoupdater:** fallback `stable → latest` em `getLatestVersion` — `@verboo/code` só publica tag `latest`, então usuários com `autoUpdatesChannel: 'stable'` ficavam sem updates por 404 silencioso.
+
 ## [0.8.0](https://github.com/verbeux-ai/code/compare/v0.7.27...v0.8.0) (2026-05-06)
 
 ### Novidades
