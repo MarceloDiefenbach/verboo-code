@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.11](https://github.com/verbeux-ai/code/compare/v0.8.10...v0.8.11) (2026-05-13)
+
+### Correções
+
+* **install:** `verboo install` agora exibe mensagem útil em vez de tentar baixar binários do bucket GCS da Anthropic (que não tem `@verboo/code` → 404 silencioso). Orienta o usuário a usar `npm install -g @verboo/code@latest` ou `bun install -g @verboo/code@latest`.
+* **doctor:** removidas as warnings de mismatch de installation method que sugeriam `verboo install` como fix — o instalador nativo não funciona na nossa distribuição.
+* **update:** removido o aviso *"Config expects X installation / Currently running Y / Updating the Y installation"* que confundia usuários ("ele fala que mudou para native installer mas não mudou"). Config agora é silenciosamente corrigido para refletir o runtime real, com log em `debug`.
+
 ## [0.8.10](https://github.com/verbeux-ai/code/compare/v0.8.9...v0.8.10) (2026-05-13)
 
 ### Correções
