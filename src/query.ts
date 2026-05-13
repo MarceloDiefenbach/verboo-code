@@ -1473,34 +1473,15 @@ async function* queryLoop(
             .join(' ')
             .toLowerCase()
 
-          // Tightened patterns: require explicit action verbs and exclude
-          // common explanatory phrasing to reduce false positives.
-          const continuationSignals = [
-            // Only match "so now I/let me/we" followed by an action verb
-            /\bso now (i|let me|we) (need to|have to|should|must|will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up)\b/,
-            // "now I'll" + action (not "now I'll explain" etc.)
-            /\bnow i('ll| will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|go|proceed)\b/,
-            // "let me" + action (not "let me think/explain/show")
-            /\blet me (go ahead and |now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|proceed)\b/,
-            // "I'll/I need to/I have to" + action, only if message is short (<80 chars)
-            ...(lastText.length < 80
-              ? [/\b(i('ll| will| need to| have to| must) (now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up))\b/]
-              : []),
-            // "time to" + action
-            /\btime to (do|create|write|edit|update|fix|implement|add|run|check|make|build|get started|begin)\b/,
-            // "next, I'll/let me" + action, only if message is short
-            ...(lastText.length < 80
-              ? [/\bnext,?\s+(i('ll| will)|let me|i need to) (do|create|write|edit|update|fix|implement|add|run|check|make|build)\b/]
-              : []),
-          ]
+          // Nudge é o caminho padrão sempre que o modelo emite só texto.
+          // Só não nudge se houver marcador explícito de término (en + pt-br).
+          // MAX_CONTINUATION_NUDGES no condicional acima limita a 3 tentativas.
+          const completionMarkers =
+            /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if|pronto|conclu[íi]do|finalizado|terminado|conclus[ãa]o|resumo|isso [ée] tudo|espero que ajude|qualquer d[úu]vida|qualquer coisa avise|fico [àa] disposi[çc][ãa]o)\b/
 
-          // Don't nudge if the text contains completion markers
-          const completionMarkers = /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if)\b/
-          if (completionMarkers.test(lastText)) {
-            // Model signaled completion — don't nudge
-          } else if (continuationSignals.some(re => re.test(lastText))) {
+          if (!completionMarkers.test(lastText)) {
             logForDebugging(
-              `Continuation nudge triggered (${state.continuationNudgeCount + 1}/${MAX_CONTINUATION_NUDGES}): model said "${lastText.slice(-120)}" without tool calls`,
+              `Continuation nudge triggered (${state.continuationNudgeCount + 1}/${MAX_CONTINUATION_NUDGES}): assistant produced text without tool_use, tail="${lastText.slice(-120)}"`,
             )
             const nudge = createUserMessage({
               content: 'Continue with the task. Use the appropriate tools to proceed.',
@@ -1525,8 +1506,9 @@ async function* queryLoop(
         }
       }
 
-      // [DIAGNOSTIC — Fase 1] Capturar texto/sinais quando cai aqui sem nudge.
-      // Remover ou rebaixar para 'debug' após confirmar a causa do silent stop.
+      // Diagnóstico: cai aqui quando completionMarkers detectou término OU
+      // MAX_CONTINUATION_NUDGES foi atingido. Útil para investigar casos de
+      // parada silenciosa residuais. Mantido em level=debug — não polui logs.
       {
         const lastAssistantForDiag = assistantMessages.at(-1)
         const lastTextForDiag =
@@ -1540,15 +1522,7 @@ async function* queryLoop(
             : ''
         const lastTextLower = lastTextForDiag.toLowerCase()
         const completionMarkersDiag =
-          /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if)\b/
-        const continuationSignalsDiag = [
-          /\bso now (i|let me|we) (need to|have to|should|must|will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up)\b/,
-          /\bnow i('ll| will) (do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|go|proceed)\b/,
-          /\blet me (go ahead and |now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|proceed)\b/,
-          /\b(i('ll| will| need to| have to| must) (now )?(do|create|write|edit|update|fix|implement|add|run|check|make|build|set up))\b/,
-          /\btime to (do|create|write|edit|update|fix|implement|add|run|check|make|build|get started|begin)\b/,
-          /\bnext,?\s+(i('ll| will)|let me|i need to) (do|create|write|edit|update|fix|implement|add|run|check|make|build)\b/,
-        ]
+          /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if|pronto|conclu[íi]do|finalizado|terminado|conclus[ãa]o|resumo|isso [ée] tudo|espero que ajude|qualquer d[úu]vida|qualquer coisa avise|fico [àa] disposi[çc][ãa]o)\b/
         logForDebugging(
           JSON.stringify({
             type: 'silent_stop_diagnostic',
@@ -1560,11 +1534,10 @@ async function* queryLoop(
             textLength: lastTextForDiag.length,
             textPreview: lastTextForDiag.slice(-500),
             matchedCompletionMarker: completionMarkersDiag.test(lastTextLower),
-            matchedContinuationSignal: continuationSignalsDiag.some(re =>
-              re.test(lastTextLower),
-            ),
+            reachedNudgeCap:
+              state.continuationNudgeCount >= MAX_CONTINUATION_NUDGES,
           }),
-          { level: 'warn' },
+          { level: 'debug' },
         )
       }
 

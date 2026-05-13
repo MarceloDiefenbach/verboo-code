@@ -82,22 +82,24 @@ describe('Session timeout fix', () => {
 // Fix 3: Agent loop continuation nudge
 // ---------------------------------------------------------------------------
 describe('Agent loop continuation nudge', () => {
-  test('query.ts has continuation signal detection', async () => {
+  test('query.ts emits continuation nudge when assistant produces text without tool_use', async () => {
     const content = await file('query.ts').text()
 
-    expect(content).toContain('continuationSignals')
     expect(content).toContain('Continuation nudge triggered')
     expect(content).toContain('continuation_nudge')
   })
 
-  test('continuation signals include tightened patterns', async () => {
+  test('nudge is default unless completionMarkers match (covers en + pt-br)', async () => {
     const content = await file('query.ts').text()
 
-    // Should detect tightened patterns requiring explicit action verbs
-    expect(content).toMatch(/so now \(i\|let me\|we\)/)
     expect(content).toContain('completionMarkers')
     expect(content).toContain('MAX_CONTINUATION_NUDGES')
-    // Verify the nudge counter guard exists
+    // pt-br completion markers must be present so the model can signal
+    // completion in Portuguese without triggering an unnecessary nudge.
+    expect(content).toMatch(/pronto/)
+    expect(content).toMatch(/finalizado/)
+    expect(content).toMatch(/terminado/)
+    // Nudge counter guard remains in place to prevent infinite nudge loops.
     expect(content).toMatch(/continuationNudgeCount\s*<\s*MAX_CONTINUATION_NUDGES/)
   })
 
