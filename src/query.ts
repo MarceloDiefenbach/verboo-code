@@ -1473,15 +1473,62 @@ async function* queryLoop(
             .join(' ')
             .toLowerCase()
 
-          // Nudge é o caminho padrão sempre que o modelo emite só texto.
-          // Só não nudge se houver marcador explícito de término (en + pt-br).
-          // MAX_CONTINUATION_NUDGES no condicional acima limita a 3 tentativas.
-          const completionMarkers =
-            /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if|pronto|conclu[íi]do|finalizado|terminado|conclus[ãa]o|resumo|isso [ée] tudo|espero que ajude|qualquer d[úu]vida|qualquer coisa avise|fico [àa] disposi[çc][ãa]o)\b/
+          // Sinais de continuação: modelo expressou intenção de seguir adiante
+          // (ex.: "agora vou criar X", "now I'll do Y"). Só nudge nesses casos.
+          // Verbos de ação são exigidos para reduzir falso positivo em prosa
+          // explicativa ("vou explicar", "let me think").
+          // Padrões inglês + português, ampla cobertura de verbos e construções.
+          const VERBS_EN =
+            'do|create|write|edit|update|fix|implement|add|run|check|make|build|set up|deploy|test|install|refactor|investigate|search|explore|analyze|analyse|review|validate|patch|start|finish|prepare|plan|design|draft|generate|produce|begin|commit|push|debug|verify|inspect|trace|compile|launch|kick off|spin up|wire up|hook up|tackle|address|handle'
+          const VERBS_PT =
+            'fazer|criar|escrever|editar|atualizar|corrigir|consertar|implementar|adicionar|incluir|rodar|executar|verificar|checar|construir|montar|configurar|come[çc]ar|iniciar|continuar|seguir|proceder|prosseguir|deployar|testar|instalar|refatorar|investigar|buscar|procurar|explorar|analisar|revisar|validar|terminar|preparar|planejar|desenhar|esbo[çc]ar|rascunhar|gerar|produzir|commitar|push(ar|ear)|debugar|inspecionar|tra[çc]ar|compilar|subir|lan[çc]ar|atacar|tratar|resolver|abordar|mexer (no|na|nos|nas|em)|alterar|trocar|substituir'
+          const continuationSignals = [
+            // ───────── Inglês ─────────
+            new RegExp(`\\bso now (i|let me|we|i'll) (need to|have to|should|must|will|am going to|am about to)?\\s*(${VERBS_EN})\\b`),
+            new RegExp(`\\bnow (i('ll| will| am going to| am about to)|let me|we'll|we will)\\s+(${VERBS_EN}|go|proceed)\\b`),
+            new RegExp(`\\blet me (go ahead and |now |first |then |also |quickly |actually )?(${VERBS_EN}|proceed)\\b`),
+            new RegExp(`\\bi'?m (going to|about to|gonna)\\s+(${VERBS_EN}|go|proceed)\\b`),
+            ...(lastText.length < 200
+              ? [new RegExp(`\\bi('ll| will| need to| have to| must)\\s+(now |then |first |also |actually )?(${VERBS_EN})\\b`)]
+              : []),
+            new RegExp(`\\btime to\\s+(${VERBS_EN}|get started)\\b`),
+            new RegExp(`\\b(next|first|then|after that|moving on|onto|on to),?\\s+(i('ll| will)|let me|i need to|i'?m going to)\\s+(${VERBS_EN})\\b`),
+            new RegExp(`\\b(starting with|beginning by|tackling|diving into|heading (in)?to|stepping into|kicking off|moving to|going to|about to)\\s+(the |a |an )?(${VERBS_EN}|task|step|next|implementation)\\b`),
+            /\b(continuing|proceeding|moving) (with|to|on)\b/,
+            /\bplan(:|\s+is to|\s+now is|\s+here is)\b/,
+            /\b(step|phase|stage)\s*\d+\b/,
+            /\b(first|next|then|finally|lastly),?\s+(i('ll| will)|let me)\b/,
+            /\b(here'?s|here is) (the|my|what) (plan|approach|strategy|steps)\b/,
+            /\bgoing to (start|begin) (by|with)\b/,
+            /\bonce (that'?s|that is|i'?m) done,?\s+(i('ll| will)|let me)\b/,
 
-          if (!completionMarkers.test(lastText)) {
+            // ───────── Português ─────────
+            new RegExp(`\\b(agora|ent[ãa]o|ai|a[ií]|da[íi])\\s+(vou|preciso|posso|tenho que|devo|estou indo|estou prestes a|irei|farei|seguirei|come[çc]arei|continuarei)\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\bvou\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\b(vamos|bora)\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\b(deixa|deixe)\\s+(eu|me)\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\bhora de\\s+(${VERBS_PT}|come[çc]ar|seguir|continuar|botar a m[ãa]o)\\b`),
+            new RegExp(`\\b(pretendo|tenciono|planejo|preciso|tenho que|devo)\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\b(estou|t[ôo])\\s+(indo|prestes a|come[çc]ando a|partindo para|partindo pra|encaminhando para)\\s+(${VERBS_PT})\\b`),
+            new RegExp(`\\b(pegando|partindo|seguindo|avan[çc]ando|encaminhando|indo)\\s+(para|pra)\\s+(${VERBS_PT})\\b`),
+            /\b(pr[óo]ximo passo|em seguida|a seguir|na sequ[êe]ncia|seguindo em frente|m[ãa]os [àa] obra|partiu|bora l[áa]|l[áa] vai|l[áa] vou eu|j[áa] vou|aqui vai|manda ver|j[áa] j[áa]|de cara)\b/,
+            new RegExp(`\\b(continuando|prosseguindo|seguindo|avan[çc]ando|retomando)(\\s+com|\\s+a|\\s+o|\\s+para|\\s+pra|,)`),
+            /\b(passo|etapa|fase)\s*\d+\b/,
+            /\b(plano|estrat[ée]gia|abordagem|roteiro|sequ[êe]ncia)(:|\s+[ée]|\s+seria|\s+ser[áa]|\s+aqui [ée])\b/,
+            new RegExp(`\\b(primeiro|depois|ent[ãa]o|em seguida|por fim|por [úu]ltimo|ap[óo]s isso),?\\s+(vou|preciso|tenho que|devo|farei|criarei|implementarei|come[çc]arei|verificarei|checarei|seguirei|continuarei|terminarei|rodarei|executarei|testarei)\\b`),
+            /\b(aqui (vai|est[áa])|aqui segue) (o|a|os|as|meu|minha)?\s*(plano|abordagem|estrat[ée]gia|roteiro|passos|etapas)\b/,
+            new RegExp(`\\bquando (terminar|acabar|finalizar) (essa|esta|essa parte|esta parte),?\\s+(vou|farei|seguirei)\\s+(${VERBS_PT})\\b`),
+          ]
+
+          // Markers de término — quando casa, NÃO nudge. Inglês + pt-br.
+          const completionMarkers =
+            /\b(done|finished|completed|complete|summary|that's all|that is all|all (set|good|finished|done)|hope (this|that) helps|let me know if|happy to help|anything (else|more|i can)|feel free to (ask|tell|share|let)|if you need|is there anything|i'?m here|available if|task (complete|is complete|done|finished|is done|is finished)|i'?m done|we'?re done|wrapping (up|things up)|that should (do it|cover)|sounds good|all yours|over to you|ready for (review|next)|pronto|conclu[íi]do|finalizado|terminado|encerrad[oa]|conclus[ãa]o|resumo|isso [ée] tudo|isso [ée] o que|espero (que ajude|ter ajudado)|qualquer (d[úu]vida|coisa(\s+(avise|me avise|me chame|chame|fale))?)|fico [àa] disposi[çc][ãa]o|estou [àa] (sua )?disposi[çc][ãa]o|para mais informa[çc][õo]es|feliz em ajudar|tudo (certo|pronto|feito|ok|certinho)|est[áa] (feito|pronto|tudo certo|ok)|tarefa (conclu[íi]da|finalizada|completada|pronta|encerrada)|como posso ajudar|posso ajudar (em mais|com algo)|precisa de (mais alguma coisa|algo mais)|se precisar de (algo|mais)|aguardo (suas instru[çc][õo]es|sua resposta|seu retorno)|me avise se|deixe me saber se|qualquer outra (coisa|d[úu]vida))\b/
+
+          if (completionMarkers.test(lastText)) {
+            // Model signaled completion — don't nudge
+          } else if (continuationSignals.some(re => re.test(lastText))) {
             logForDebugging(
-              `Continuation nudge triggered (${state.continuationNudgeCount + 1}/${MAX_CONTINUATION_NUDGES}): assistant produced text without tool_use, tail="${lastText.slice(-120)}"`,
+              `Continuation nudge triggered (${state.continuationNudgeCount + 1}/${MAX_CONTINUATION_NUDGES}): model said "${lastText.slice(-120)}" without tool calls`,
             )
             const nudge = createUserMessage({
               content: 'Continue with the task. Use the appropriate tools to proceed.',
@@ -1522,7 +1569,7 @@ async function* queryLoop(
             : ''
         const lastTextLower = lastTextForDiag.toLowerCase()
         const completionMarkersDiag =
-          /\b(done|finished|completed|complete|summary|that's all|that is all|all set|hope this helps|let me know if|pronto|conclu[íi]do|finalizado|terminado|conclus[ãa]o|resumo|isso [ée] tudo|espero que ajude|qualquer d[úu]vida|qualquer coisa avise|fico [àa] disposi[çc][ãa]o)\b/
+          /\b(done|finished|completed|complete|summary|that's all|that is all|all (set|good|finished|done)|hope (this|that) helps|let me know if|happy to help|anything (else|more|i can)|feel free to (ask|tell|share|let)|if you need|is there anything|i'?m here|available if|task (complete|is complete|done|finished|is done|is finished)|i'?m done|we'?re done|wrapping (up|things up)|that should (do it|cover)|sounds good|all yours|over to you|ready for (review|next)|pronto|conclu[íi]do|finalizado|terminado|encerrad[oa]|conclus[ãa]o|resumo|isso [ée] tudo|isso [ée] o que|espero (que ajude|ter ajudado)|qualquer (d[úu]vida|coisa(\s+(avise|me avise|me chame|chame|fale))?)|fico [àa] disposi[çc][ãa]o|estou [àa] (sua )?disposi[çc][ãa]o|para mais informa[çc][õo]es|feliz em ajudar|tudo (certo|pronto|feito|ok|certinho)|est[áa] (feito|pronto|tudo certo|ok)|tarefa (conclu[íi]da|finalizada|completada|pronta|encerrada)|como posso ajudar|posso ajudar (em mais|com algo)|precisa de (mais alguma coisa|algo mais)|se precisar de (algo|mais)|aguardo (suas instru[çc][õo]es|sua resposta|seu retorno)|me avise se|deixe me saber se|qualquer outra (coisa|d[úu]vida))\b/
         logForDebugging(
           JSON.stringify({
             type: 'silent_stop_diagnostic',

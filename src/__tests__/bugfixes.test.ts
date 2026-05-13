@@ -82,24 +82,42 @@ describe('Session timeout fix', () => {
 // Fix 3: Agent loop continuation nudge
 // ---------------------------------------------------------------------------
 describe('Agent loop continuation nudge', () => {
-  test('query.ts emits continuation nudge when assistant produces text without tool_use', async () => {
+  test('query.ts emits continuation nudge when model expresses intent without tool_use', async () => {
     const content = await file('query.ts').text()
 
     expect(content).toContain('Continuation nudge triggered')
     expect(content).toContain('continuation_nudge')
+    // Must use explicit continuation signals (en + pt-br), NOT "always nudge"
+    // — the "always nudge" approach caused 3-nudge regression on greetings
+    // like "Olá! Como posso ajudar?".
+    expect(content).toContain('continuationSignals')
   })
 
-  test('nudge is default unless completionMarkers match (covers en + pt-br)', async () => {
+  test('continuation signals cover both English and Portuguese verbs', async () => {
+    const content = await file('query.ts').text()
+
+    expect(content).toContain('VERBS_EN')
+    expect(content).toContain('VERBS_PT')
+    // English action verbs
+    expect(content).toMatch(/implement/)
+    expect(content).toMatch(/refactor/)
+    // Portuguese action verbs
+    expect(content).toMatch(/implementar/)
+    expect(content).toMatch(/refatorar/)
+    expect(content).toMatch(/configurar/)
+  })
+
+  test('completion markers cover both English and Portuguese', async () => {
     const content = await file('query.ts').text()
 
     expect(content).toContain('completionMarkers')
     expect(content).toContain('MAX_CONTINUATION_NUDGES')
-    // pt-br completion markers must be present so the model can signal
-    // completion in Portuguese without triggering an unnecessary nudge.
+    // pt-br markers prevent unnecessary nudges after Portuguese completion
     expect(content).toMatch(/pronto/)
     expect(content).toMatch(/finalizado/)
     expect(content).toMatch(/terminado/)
-    // Nudge counter guard remains in place to prevent infinite nudge loops.
+    expect(content).toMatch(/como posso ajudar/)
+    // Nudge counter guard remains in place
     expect(content).toMatch(/continuationNudgeCount\s*<\s*MAX_CONTINUATION_NUDGES/)
   })
 
