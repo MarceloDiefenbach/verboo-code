@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.10](https://github.com/verbeux-ai/code/compare/v0.8.9...v0.8.10) (2026-05-13)
+
+### Correções
+
+* **build:** **causa raiz do auto-updater quebrado para TODOS os usuários** — o Bun bundler substitui `process.env.NODE_ENV` por `"development"` por default. Isso fazia `getCurrentInstallationType()` retornar imediatamente `'development'` no bundle distribuído, bloqueando completamente o auto-updater para qualquer instalação npm (qualquer usuário, qualquer versão desde o início). Comando `verboo update` exibia: *"You are running a development build — auto-update is unavailable"*. Fix: adicionado `'process.env.NODE_ENV': JSON.stringify('production')` ao `define` dos dois bundles (CLI e SDK) em `scripts/build.ts`. Validado: bundle agora gera `if (false) {}` no lugar de `if (true) { return "development" }`, e `verboo update` segue o fluxo normal de verificação no npm.
+
 ## [0.8.9](https://github.com/verbeux-ai/code/compare/v0.8.8...v0.8.9) (2026-05-13)
 
 ### Correções
