@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.9](https://github.com/verbeux-ai/code/compare/v0.8.8...v0.8.9) (2026-05-13)
+
+### Correções
+
+* **query:** **regressão crítica do 0.8.8** — a abordagem "sempre nudge a menos que completionMarkers casem" disparava 3 nudges consecutivos em saudações simples (ex.: usuário digita `hello`, modelo responde `Olá! Como posso ajudar?`, e a lógica forçava o agente a "continue with the task" 3 vezes). Restaurada a lógica de `continuationSignals` (modelo precisa expressar intenção explícita de seguir adiante para disparar nudge), agora com cobertura ampla em inglês E português. Verbos de ação centralizados em `VERBS_EN` e `VERBS_PT` (50+ verbos cada), e construções idiomáticas como `agora vou`, `bora`, `vamos`, `deixa eu`, `next I'll`, `let me`, `moving on`, etc.
+* **query:** `completionMarkers` expandido com muitos casos en+pt-br para reduzir falsos positivos quando o modelo encerra naturalmente (ex.: `como posso ajudar`, `tudo certo`, `tarefa concluída`, `aguardo suas instruções`, `wrapping up`, `over to you`).
+
 ## [0.8.8](https://github.com/verbeux-ai/code/compare/v0.8.7...v0.8.8) (2026-05-13)
 
 ### Correções
