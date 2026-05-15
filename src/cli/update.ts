@@ -401,9 +401,6 @@ export async function update() {
         )
       } else {
         process.stderr.write('Try running with sudo or fix npm permissions\n')
-        process.stderr.write(
-          'Or consider using native installation with: verboo install\n',
-        )
       }
       await gracefulShutdown(1)
       break
@@ -413,10 +410,6 @@ export async function update() {
         process.stderr.write('Try manually updating with:\n')
         process.stderr.write(
           `  cd ~/.verboo/local && npm update ${MACRO.PACKAGE_URL}\n`,
-        )
-      } else {
-        process.stderr.write(
-          'Or consider using native installation with: verboo install\n',
         )
       }
       await gracefulShutdown(1)
