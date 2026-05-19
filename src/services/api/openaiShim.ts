@@ -629,8 +629,12 @@ function convertMessages(
                     ...toolCall.extra_content,
                     google: {
                       ...existingGoogle,
+                      // Prefer explicit signature, then fall back to already-captured
+                      // thought_signature (from extra_content preserved in messages.ts)
                       thought_signature:
-                        signature ?? 'skip_thought_signature_validator',
+                        signature ??
+                        (existingGoogle.thought_signature as string | undefined) ??
+                        'skip_thought_signature_validator',
                     },
                   }
                 }
@@ -1268,6 +1272,17 @@ async function* openaiStreamToAnthropic(
               if (active) {
                 if (tc.function.arguments) {
                   active.jsonBuffer += tc.function.arguments
+                }
+
+                // Also capture extra_content/thought_signature if bundled with args
+                const contSig = (tc as any).thought_signature as string | undefined
+                const contEC = tc.extra_content
+                  ? { ...tc.extra_content }
+                  : contSig
+                  ? { google: { thought_signature: contSig } }
+                  : undefined
+                if (contEC) {
+                  active.extra_content = { ...(active.extra_content ?? {}), ...contEC }
                 }
 
                 if (active.normalizeAtStop) {
