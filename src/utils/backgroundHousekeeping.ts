@@ -21,6 +21,14 @@ import {
 } from './cleanup.js'
 import { cleanupOldVersions } from './nativeInstaller/index.js'
 import { autoUpdateMarketplacesAndPluginsInBackground } from './plugins/pluginAutoupdate.js'
+import {
+  getLatestVersion,
+  installGlobalPackage,
+} from './autoUpdater.js'
+import { localInstallationExists, installOrUpdateClaudePackage } from './localInstaller.js'
+import { gte } from './semver.js'
+import { getInitialSettings } from './settings/settings.js'
+import { writeToStdout } from './process.js'
 
 // 24 hours in milliseconds
 const RECURRING_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000
@@ -28,7 +36,30 @@ const RECURRING_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000
 // 10 minutes after start.
 const DELAY_VERY_SLOW_OPERATIONS_THAT_HAPPEN_EVERY_SESSION = 10 * 60 * 1000
 
+async function autoUpdateCliInBackground(): Promise<void> {
+  try {
+    const channel = getInitialSettings()?.autoUpdatesChannel ?? 'latest'
+    const latest = await getLatestVersion(channel)
+    if (!latest || gte(MACRO.DISPLAY_VERSION, latest)) return
+
+    writeToStdout(`\nNova versão disponível: ${latest} (atual: ${MACRO.DISPLAY_VERSION})\n`)
+    writeToStdout('Atualizando automaticamente...\n')
+
+    const isLocal = await localInstallationExists()
+    const status = isLocal
+      ? await installOrUpdateClaudePackage(channel)
+      : await installGlobalPackage()
+
+    if (status === 'success') {
+      writeToStdout(`✓ Atualizado para ${latest}. Reinicie o Verboo para usar a nova versão.\n\n`)
+    }
+  } catch {
+    // silently ignore — falhas de update não devem afetar a sessão
+  }
+}
+
 export function startBackgroundHousekeeping(): void {
+  void autoUpdateCliInBackground()
   void initMagicDocs()
   void initSkillImprovement()
   if (feature('EXTRACT_MEMORIES')) {
