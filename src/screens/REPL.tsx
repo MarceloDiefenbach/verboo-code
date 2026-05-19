@@ -1520,26 +1520,26 @@ export function REPL({
 
   // Hook pro warming-up signal vindo do router upstream (cold start do backend).
   // O openaiShim parser detecta chunks `router_status:"warming"` e chama esse
-  // handler, que troca o verb do spinner por uma das mensagens divertidas
-  // abaixo até o primeiro chunk real chegar. Não vai pro histórico — só é
-  // UI transiente. Mensagens não citam infra interna, só "Verboo Intelligence".
+  // handler, que troca o verb do spinner por uma das mensagens abaixo até o
+  // primeiro chunk real chegar. Não vai pro histórico — só é UI transiente.
+  // Sem emoji pra evitar flicker em terminais com largura inconsistente.
   useEffect(() => {
     const warmingMessages = [
-      '🔥 Verboo Intelligence aquecendo os motores',
-      '☕ Verboo Intelligence tomando um cafezinho',
-      '🧠 Verboo Intelligence acordando os neurônios',
-      '🚀 Verboo Intelligence preparando os foguetes',
-      '⚡ Verboo Intelligence carregando energia',
-      '🦾 Verboo Intelligence flexionando os músculos',
-      '🌅 Verboo Intelligence despertando',
-      '🍳 Verboo Intelligence esquentando a frigideira',
-      '🎪 Verboo Intelligence montando o palco',
-      '🧘 Verboo Intelligence meditando antes de responder',
-      '🎩 Verboo Intelligence ajustando a cartola',
-      '🪄 Verboo Intelligence afiando a varinha',
-      '🛠️ Verboo Intelligence apertando os parafusos',
-      '🎬 Verboo Intelligence preparando a cena',
-      '🌶️ Verboo Intelligence apimentando as ideias',
+      'Verboo Intelligence is firing up the engines',
+      'Verboo Intelligence is brewing a fresh cup',
+      'Verboo Intelligence is waking up the neurons',
+      'Verboo Intelligence is fueling the rockets',
+      'Verboo Intelligence is charging its capacitors',
+      'Verboo Intelligence is stretching its muscles',
+      'Verboo Intelligence is sharpening its wits',
+      'Verboo Intelligence is tuning the instruments',
+      'Verboo Intelligence is putting on the thinking cap',
+      'Verboo Intelligence is polishing the crystal ball',
+      'Verboo Intelligence is summoning brilliance',
+      'Verboo Intelligence is calibrating sensors',
+      'Verboo Intelligence is loading wisdom modules',
+      'Verboo Intelligence is gathering its thoughts',
+      'Verboo Intelligence is rolling out the red carpet',
     ];
     let cancelled = false;
     void import('../services/api/openaiShim.js').then(mod => {
