@@ -1518,17 +1518,36 @@ export function REPL({
   const [spinnerColor, setSpinnerColor] = useState<keyof Theme | null>(null);
   const [spinnerShimmerColor, setSpinnerShimmerColor] = useState<keyof Theme | null>(null);
 
-  // Hook pro warming-up signal vindo do router upstream (vast.ai cold start).
+  // Hook pro warming-up signal vindo do router upstream (cold start do backend).
   // O openaiShim parser detecta chunks `router_status:"warming"` e chama esse
-  // handler, que troca o verb do spinner por um aviso amigável até o primeiro
-  // chunk real chegar. Não vai pro histórico — só é UI transiente.
+  // handler, que troca o verb do spinner por uma das mensagens divertidas
+  // abaixo até o primeiro chunk real chegar. Não vai pro histórico — só é
+  // UI transiente. Mensagens não citam infra interna, só "Verboo Intelligence".
   useEffect(() => {
+    const warmingMessages = [
+      '🔥 Verboo Intelligence aquecendo os motores',
+      '☕ Verboo Intelligence tomando um cafezinho',
+      '🧠 Verboo Intelligence acordando os neurônios',
+      '🚀 Verboo Intelligence preparando os foguetes',
+      '⚡ Verboo Intelligence carregando energia',
+      '🦾 Verboo Intelligence flexionando os músculos',
+      '🌅 Verboo Intelligence despertando',
+      '🍳 Verboo Intelligence esquentando a frigideira',
+      '🎪 Verboo Intelligence montando o palco',
+      '🧘 Verboo Intelligence meditando antes de responder',
+      '🎩 Verboo Intelligence ajustando a cartola',
+      '🪄 Verboo Intelligence afiando a varinha',
+      '🛠️ Verboo Intelligence apertando os parafusos',
+      '🎬 Verboo Intelligence preparando a cena',
+      '🌶️ Verboo Intelligence apimentando as ideias',
+    ];
     let cancelled = false;
     void import('../services/api/openaiShim.js').then(mod => {
       if (cancelled) return;
       mod.setOpenAIShimRouterStatusHandler(status => {
         if (status === 'warming-up') {
-          setSpinnerMessage('🔥 Warming up vast.ai worker (cold start, ~1–3 min)');
+          const msg = warmingMessages[Math.floor(Math.random() * warmingMessages.length)]!;
+          setSpinnerMessage(msg);
         } else {
           setSpinnerMessage(null);
         }
