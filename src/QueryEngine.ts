@@ -1454,12 +1454,19 @@ export async function* ask({
       : {}),
   })
 
+  // Plumba setSDKStatus pro openaiShim (module-level) pra que o stream parser
+  // possa sinalizar warming-up vindo do router quando o backend serverless
+  // está em cold start. Limpa no fim pra não vazar pra outras queries.
+  const { setOpenAIShimRouterStatusHandler } = await import('./services/api/openaiShim.js')
+  setOpenAIShimRouterStatusHandler(setSDKStatus ? (s) => setSDKStatus(s) : null)
+
   try {
     yield* engine.submitMessage(prompt, {
       uuid: promptUuid,
       isMeta,
     })
   } finally {
+    setOpenAIShimRouterStatusHandler(null)
     setReadFileCache(engine.getReadFileState())
   }
 }

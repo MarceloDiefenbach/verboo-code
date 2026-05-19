@@ -90,13 +90,22 @@ function convertStatusMessage(msg: SDKStatusMessage): SystemMessage | null {
     return null
   }
 
+  let content: string
+  switch (msg.status) {
+    case 'compacting':
+      content = 'Compacting conversation…'
+      break
+    case 'warming-up':
+      content = 'Warming up vast.ai worker (cold start, ~1–3 min)…'
+      break
+    default:
+      content = `Status: ${msg.status}`
+  }
+
   return {
     type: 'system',
     subtype: 'informational',
-    content:
-      msg.status === 'compacting'
-        ? 'Compacting conversation…'
-        : `Status: ${msg.status}`,
+    content,
     level: 'info',
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),

@@ -918,6 +918,18 @@ function repairPossiblyTruncatedObjectJson(raw: string): string | null {
  * Async generator that transforms an OpenAI SSE stream into
  * Anthropic-format BetaRawMessageStreamEvent objects.
  */
+// Module-level handler para sinalizar status do router upstream (ex.: vast.ai
+// warming-up durante cold start). Definido pelo QueryEngine antes de cada query
+// e limpo no fim. Module-level (não per-instance) porque o cliente é criado
+// uma vez por sessão mas setSDKStatus muda a cada query.
+let routerStatusHandler: ((status: 'warming-up' | null) => void) | null = null
+
+export function setOpenAIShimRouterStatusHandler(
+  fn: ((status: 'warming-up' | null) => void) | null,
+): void {
+  routerStatusHandler = fn
+}
+
 async function* openaiStreamToAnthropic(
   response: Response,
   model: string,
@@ -942,6 +954,7 @@ async function* openaiStreamToAnthropic(
   let lastStopReason: 'tool_use' | 'max_tokens' | 'end_turn' | null = null
   let hasEmittedFinalUsage = false
   let hasProcessedFinishReason = false
+  let routerWarmingActive = false
   const streamState = createStreamState()
 
   // Emit message_start
@@ -1087,6 +1100,19 @@ async function* openaiStreamToAnthropic(
         continue
       }
 
+      // Router status signal (e.g. verboo-code-router emite quando o backend
+      // está em cold start). Chunk não tem `choices`, então parsers OpenAI
+      // padrão ignoram. Aqui notificamos o caller para mostrar status
+      // transitório sem poluir histórico.
+      const routerStatus = (chunk as unknown as { router_status?: string }).router_status
+      if (typeof routerStatus === 'string') {
+        if (routerStatus === 'warming' && !routerWarmingActive) {
+          routerWarmingActive = true
+          routerStatusHandler?.('warming-up')
+        }
+        continue
+      }
+
       // In-stream error event. Used by OpenAI when a stream fails after
       // headers have been sent, and by intermediaries (e.g. gateways) that
       // want to signal a structured failure without dropping the TCP
@@ -1114,6 +1140,12 @@ async function* openaiStreamToAnthropic(
       }
 
       const chunkUsage = convertChunkUsage(chunk.usage)
+
+      // Chunk com content real chegou — limpa warming-up se estava ativo.
+      if (routerWarmingActive && Array.isArray(chunk.choices) && chunk.choices.length > 0) {
+        routerWarmingActive = false
+        routerStatusHandler?.(null)
+      }
 
       for (const choice of chunk.choices ?? []) {
         const delta = choice.delta

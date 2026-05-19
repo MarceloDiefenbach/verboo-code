@@ -1558,7 +1558,7 @@ export type RewindFilesResult = {
 
 export type SDKAssistantMessageError = "authentication_failed" | "billing_error" | "rate_limit" | "invalid_request" | "server_error" | "unknown" | "max_output_tokens"
 
-export type SDKStatus = "compacting" | null
+export type SDKStatus = "compacting" | "warming-up" | null
 
 export type SDKUserMessage = {
   type: "user"
@@ -1826,7 +1826,7 @@ export type SDKCompactBoundaryMessage = {
 export type SDKStatusMessage = {
   type: "system"
   subtype: "status"
-  status: "compacting" | null
+  status: "compacting" | "warming-up" | null
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk"
   uuid: string
   session_id: string
@@ -2177,7 +2177,7 @@ export type SDKMessage = ({
 }) | ({
   type: "system"
   subtype: "status"
-  status: "compacting" | null
+  status: "compacting" | "warming-up" | null
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk"
   uuid: string
   session_id: string

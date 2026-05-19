@@ -113,10 +113,12 @@ export function useRemoteSession({
   // Timer for detecting stuck sessions
   const responseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Track whether the remote session is compacting. During compaction the
-  // CLI worker is busy with an API call and won't emit messages for a while;
-  // use a longer timeout and suppress spurious "unresponsive" warnings.
+  // Track whether the remote session is compacting OR warming-up upstream.
+  // During compaction the CLI worker is busy with an API call; during warming-up
+  // the router is waiting for a serverless backend (e.g. vast.ai) cold start —
+  // both can take >1min sem emit messages. Use longer timeout em ambos.
   const isCompactingRef = useRef(false)
+  const isWarmingUpRef = useRef(false)
 
   const managerRef = useRef<RemoteSessionManager | null>(null)
 
@@ -225,10 +227,12 @@ export function useRemoteSession({
           // (keep-alive ticks) update the ref but don't append to messages.
           if (sdkMessage.subtype === 'status') {
             const wasCompacting = isCompactingRef.current
+            const wasWarming = isWarmingUpRef.current
             isCompactingRef.current = sdkMessage.status === 'compacting'
-            if (wasCompacting && isCompactingRef.current) {
-              return
-            }
+            isWarmingUpRef.current = sdkMessage.status === 'warming-up'
+            // Repetições do mesmo status são keep-alive: atualiza ref mas não duplica msg.
+            if (wasCompacting && isCompactingRef.current) return
+            if (wasWarming && isWarmingUpRef.current) return
           }
           if (sdkMessage.subtype === 'compact_boundary') {
             isCompactingRef.current = false
@@ -536,9 +540,10 @@ export function useRemoteSession({
       // Use a longer timeout when the remote session is compacting, since
       // the CLI worker is busy with an API call and won't emit messages.
       if (!config?.viewerOnly) {
-        const timeoutMs = isCompactingRef.current
-          ? COMPACTION_TIMEOUT_MS
-          : RESPONSE_TIMEOUT_MS
+        const timeoutMs =
+          isCompactingRef.current || isWarmingUpRef.current
+            ? COMPACTION_TIMEOUT_MS
+            : RESPONSE_TIMEOUT_MS
         responseTimeoutRef.current = setTimeout(
           (setMessages, manager) => {
             logForDebugging(
