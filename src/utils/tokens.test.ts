@@ -1,17 +1,55 @@
-import { describe, expect, it, beforeEach } from 'bun:test'
-import {
-  getTokenCountFromUsage,
-} from './tokens.js'
+import { describe, expect, it } from 'bun:test'
+import { tokenCountWithEstimation } from './tokens.js'
 import { IncrementalTokenCounter } from './incrementalTokenCounter.js'
 
-interface FakeUsage {
-  input_tokens: number
-  output_tokens: number
-  cache_read_input_tokens?: number
-  cache_creation_input_tokens?: number
-}
-
 describe('tokens', () => {
+  it('counts the effective context window, including cached input tokens', () => {
+    const messages = [
+      {
+        type: 'assistant',
+        message: {
+          id: 'msg_1',
+          model: 'test-model',
+          content: [{ type: 'text', text: 'ok' }],
+          usage: {
+            input_tokens: 200,
+            output_tokens: 50,
+            cache_read_input_tokens: 800,
+            cache_creation_input_tokens: 25,
+          },
+        },
+      },
+    ] as any
+
+    expect(tokenCountWithEstimation(messages)).toBe(1075)
+  })
+
+  it('adds an estimate for messages created after the last API response', () => {
+    const messages = [
+      {
+        type: 'assistant',
+        message: {
+          id: 'msg_1',
+          model: 'test-model',
+          content: [{ type: 'text', text: 'ok' }],
+          usage: {
+            input_tokens: 200,
+            output_tokens: 50,
+            cache_read_input_tokens: 800,
+            cache_creation_input_tokens: 25,
+          },
+        },
+      },
+      {
+        type: 'user',
+        message: {
+          content: 'A new user message should move the context counter before the next API response.',
+        },
+      },
+    ] as any
+
+    expect(tokenCountWithEstimation(messages)).toBeGreaterThan(1075)
+  })
 })
 
 describe('IncrementalTokenCounter', () => {

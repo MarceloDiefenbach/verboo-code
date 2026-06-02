@@ -1,5 +1,4 @@
 import { c as _c } from "react-compiler-runtime";
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import React, { useEffect, useState } from 'react';
 import type { CommandResultDisplay } from 'src/commands.js';
@@ -41,14 +40,12 @@ type InstallState = {
 };
 export function getInstallationPath(): string {
   const isWindows = env.platform === 'win32';
-  const homeDir = homedir();
   if (isWindows) {
-    // Convert to Windows-style path
-    const windowsPath = join(homeDir, '.local', 'bin', 'verboo.exe');
-    // Replace forward slashes with backslashes for Windows display
+    // Local checkout lives under the repo's verboo-code directory.
+    const windowsPath = join('verboo-code', 'bin', 'verboo');
     return windowsPath.replace(/\//g, '\\');
   }
-  return '~/.local/bin/verboo';
+  return 'verboo-code/bin/verboo';
 }
 function SetupNotes(t0) {
   const $ = _c(5);

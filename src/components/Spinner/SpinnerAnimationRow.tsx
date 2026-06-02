@@ -175,7 +175,8 @@ export function SpinnerAnimationRow({
   let thinkingWidthValue = thinkingText ? stringWidth(thinkingText) : 0;
 
   // === Progressive width gating ===
-  const messageWidth = glimmerMessageWidth + 2;
+  const glimmerMessageBoxWidth = glimmerMessageWidth + 1;
+  const messageWidth = 2 + glimmerMessageBoxWidth;
   const sep = SEP_WIDTH;
   const wantsThinking = thinkingStatus !== null;
   const wantsTimerAndTokens = verbose || hasRunningTeammates || effectiveElapsedMs > SHOW_TOKENS_AFTER_MS;
@@ -228,7 +229,9 @@ export function SpinnerAnimationRow({
   return <FullWidthRow>
       <Box ref={viewportRef} flexDirection="row" flexWrap="nowrap" marginTop={1}>
         <SpinnerGlyph frame={frame} messageColor={messageColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} reducedMotion={reducedMotion} time={time} />
-        <GlimmerMessage message={message} mode={mode} messageColor={messageColor} glimmerIndex={glimmerIndex} flashOpacity={flashOpacity} shimmerColor={shimmerColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} />
+        <Box width={glimmerMessageBoxWidth} flexShrink={0}>
+          <GlimmerMessage message={message} mode={mode} messageColor={messageColor} glimmerIndex={glimmerIndex} flashOpacity={flashOpacity} shimmerColor={shimmerColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} />
+        </Box>
         {status}
       </Box>
     </FullWidthRow>;

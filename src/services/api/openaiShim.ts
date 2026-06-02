@@ -85,6 +85,7 @@ import {
   getStreamStats,
 } from '../../utils/streamingOptimizer.js'
 import { stableStringifyJson } from '../../utils/stableStringify.js'
+import { updateRouterRateLimitFromHeaders } from '../routerRateLimit.js'
 
 type SecretValueSource = Partial<{
   OPENAI_API_KEY: string
@@ -198,6 +199,13 @@ function redactUrlsInMessage(message: string): string {
 
 function sleepMs(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function captureRouterRateLimit(
+  headers: globalThis.Headers,
+  sourceUrl: string,
+): void {
+  updateRouterRateLimitFromHeaders(headers, { sourceUrl })
 }
 
 // ---------------------------------------------------------------------------
@@ -2206,6 +2214,8 @@ class OpenAIShimMessages {
         throwClassifiedTransportError(error, requestUrl, failure)
       }
 
+      captureRouterRateLimit(response.headers, requestUrl)
+
       if (response.ok) {
         let tokensIn = 0
         let tokensOut = 0
@@ -2261,6 +2271,8 @@ class OpenAIShimMessages {
           } catch (error) {
             throwClassifiedTransportError(error, responsesUrl)
           }
+
+          captureRouterRateLimit(responsesResponse.headers, responsesUrl)
 
           if (responsesResponse.ok) {
             return responsesResponse

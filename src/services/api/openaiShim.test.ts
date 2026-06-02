@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test'
 import { acquireSharedMutationLock, releaseSharedMutationLock } from '../../test/sharedMutationLock.js'
 import { registerGateway } from '../../integrations/index.ts'
+import { VERBOO_ROUTER_URL } from '../../constants/oauth.js'
 import { createOpenAIShimClient } from './openaiShim.ts'
+import {
+  getRouterRateLimitSnapshot,
+  resetRouterRateLimitForTesting,
+} from '../routerRateLimit.js'
 
 type FetchType = typeof globalThis.fetch
 
@@ -88,6 +93,7 @@ function makeStreamChunks(chunks: unknown[]): string[] {
 
 beforeEach(async () => {
   await acquireSharedMutationLock('openaiShim.test.ts')
+  resetRouterRateLimitForTesting()
   process.env.OPENAI_BASE_URL = 'http://example.test/v1'
   process.env.OPENAI_API_KEY = 'test-key'
   delete process.env.OPENAI_MODEL
@@ -150,6 +156,7 @@ afterEach(() => {
     restoreEnv('OPENROUTER_API_KEY', originalEnv.OPENROUTER_API_KEY)
     restoreEnv('DEEPSEEK_API_KEY', originalEnv.DEEPSEEK_API_KEY)
     restoreEnv('MIMO_API_KEY', originalEnv.MIMO_API_KEY)
+    resetRouterRateLimitForTesting()
     globalThis.fetch = originalFetch
   } finally {
     releaseSharedMutationLock()
@@ -216,6 +223,104 @@ test('strips canonical Anthropic headers from direct shim defaultHeaders', async
   expect(capturedHeaders?.get('x-app')).toBeNull()
   expect(capturedHeaders?.get('x-client-app')).toBeNull()
   expect(capturedHeaders?.get('x-safe-header')).toBe('keep-me')
+})
+
+test('captures router rate limit headers from successful Verboo router responses', async () => {
+  process.env.CLAUDE_CODE_USE_OPENAI = '1'
+  process.env.OPENAI_BASE_URL = VERBOO_ROUTER_URL
+  process.env.OPENAI_MODEL = 'gpt-4o'
+
+  globalThis.fetch = (async (_input, init) => {
+    void init
+
+    return new Response(
+      JSON.stringify({
+        id: 'chatcmpl-router-ok',
+        model: 'gpt-4o',
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: 'ok',
+            },
+            finish_reason: 'stop',
+          },
+        ],
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Limit': '60',
+          'X-RateLimit-Remaining': '12',
+          'X-RateLimit-Reset': '1700000060',
+        },
+      },
+    )
+  }) as FetchType
+
+  const client = createOpenAIShimClient({}) as OpenAIShimClient
+
+  await client.beta.messages.create({
+    model: 'gpt-4o',
+    system: 'test system',
+    messages: [{ role: 'user', content: 'hello' }],
+    max_tokens: 64,
+    stream: false,
+  })
+
+  expect(getRouterRateLimitSnapshot()).toEqual({
+    limit: 60,
+    remaining: 12,
+    resetAt: 1700000060,
+  })
+})
+
+test('captures router rate limit headers before a 429 error is thrown', async () => {
+  process.env.CLAUDE_CODE_USE_OPENAI = '1'
+  process.env.OPENAI_BASE_URL = VERBOO_ROUTER_URL
+  process.env.OPENAI_MODEL = 'gpt-4o'
+
+  globalThis.fetch = (async (_input, init) => {
+    void init
+
+    return new Response(
+      JSON.stringify({
+        error: {
+          type: 'rate_limit_error',
+          message: 'Rate limit exceeded',
+        },
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Limit': '60',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': '1700000060',
+          'Retry-After': '60',
+        },
+      },
+    )
+  }) as FetchType
+
+  const client = createOpenAIShimClient({}) as OpenAIShimClient
+
+  await expect(
+    client.beta.messages.create({
+      model: 'gpt-4o',
+      system: 'test system',
+      messages: [{ role: 'user', content: 'hello' }],
+      max_tokens: 64,
+      stream: false,
+    }),
+  ).rejects.toThrow('Rate limit exceeded')
+
+  expect(getRouterRateLimitSnapshot()).toEqual({
+    limit: 60,
+    remaining: 0,
+    resetAt: 1700000060,
+    retryAfter: 60,
+  })
 })
 
 test('uses OpenAI-compatible responses endpoint when OPENAI_API_FORMAT=responses', async () => {

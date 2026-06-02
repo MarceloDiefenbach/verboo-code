@@ -12,7 +12,9 @@ import type { IDESelection } from '../../hooks/useIdeSelection.js';
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { useVoiceEnabled } from '../../hooks/useVoiceEnabled.js';
 import { Box, Text } from '../../ink.js';
+import { isVerbooMode } from '../../constants/oauth.js';
 import { useClaudeAiLimits } from '../../services/claudeAiLimitsHook.js';
+import { useRouterRateLimitDisplay } from '../../services/routerRateLimitHook.js';
 import { calculateTokenWarningState } from '../../services/compact/autoCompact.js';
 import type { MCPServerConnection } from '../../services/mcp/types.js';
 import type { Message } from '../../types/message.js';
@@ -38,6 +40,7 @@ const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator = feat
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 export const FOOTER_TEMPORARY_STATUS_TIMEOUT = 5000;
+const ROUTER_RATE_LIMIT_WARNING_THRESHOLD = 20;
 type Props = {
   apiKeyStatus: VerificationStatus;
   autoUpdaterResult: AutoUpdaterResult | null;
@@ -255,6 +258,9 @@ function NotificationContent({
   // Gated on configuration — most users never set apiKeyHelper, so the
   // effect is a no-op for them (no interval allocated).
   const [apiKeyHelperSlow, setApiKeyHelperSlow] = useState<string | null>(null);
+  const routerRateLimit = useRouterRateLimitDisplay();
+  const shouldShowRouterRateLimit = isVerbooMode() && routerRateLimit !== null && routerRateLimit.availableRequests < ROUTER_RATE_LIMIT_WARNING_THRESHOLD;
+  const routerRateLimitColor = routerRateLimit?.isResetReached ? undefined : routerRateLimit && routerRateLimit.availableRequests < 5 ? "error" : "warning";
   useEffect(() => {
     if (!getConfiguredApiKeyHelper()) return;
     const interval = setInterval((setSlow: React.Dispatch<React.SetStateAction<string | null>>) => {
@@ -290,6 +296,15 @@ function NotificationContent({
           </Text> : <Text color={notifications.current.color} dimColor={!notifications.current.color} wrap="truncate">
             {notifications.current.text}
           </Text>)}
+      {shouldShowRouterRateLimit && <Box>
+          <Text
+            color={routerRateLimitColor}
+            dimColor={routerRateLimit.isResetReached}
+            wrap="truncate"
+          >
+            router {routerRateLimit.requestLabel} · {routerRateLimit.resetLabel}
+          </Text>
+        </Box>}
       {isInOverageMode && !isTeamOrEnterprise && <Box>
           <Text dimColor wrap="truncate">
             Now using extra usage

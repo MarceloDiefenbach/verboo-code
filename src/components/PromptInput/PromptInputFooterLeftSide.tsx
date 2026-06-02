@@ -462,7 +462,9 @@ function ModeIndicator({
   // from 0→1 row. Always render 1 row in fullscreen; return a space when
   // empty so Yoga reserves the row without painting anything visible.
   if (parts.length === 0 && !tasksPart && !modePart) {
-    return isFullscreenEnvEnabled() ? <Text> </Text> : null;
+    return <Box height={1} overflow="hidden">
+        <Text> </Text>
+      </Box>;
   }
 
   // flexShrink=0 keeps mode + pill at natural width; the remaining parts

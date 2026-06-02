@@ -35,9 +35,10 @@ export function SpinnerGlyph(t0) {
   const theme = getTheme(themeName);
   if (reducedMotion) {
     const isDim = Math.floor(time / (REDUCED_MOTION_CYCLE_MS / 2)) % 2 === 1;
+    const spinnerText = `${REDUCED_MOTION_DOT} `;
     let t4;
     if ($[0] !== isDim || $[1] !== messageColor) {
-      t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={messageColor} dimColor={isDim}>{REDUCED_MOTION_DOT}</Text></Box>;
+      t4 = <Box flexWrap="nowrap" height={1} width={2} flexShrink={0}><Text color={messageColor} dimColor={isDim}>{spinnerText}</Text></Box>;
       $[0] = isDim;
       $[1] = messageColor;
       $[2] = t4;
@@ -47,19 +48,20 @@ export function SpinnerGlyph(t0) {
     return t4;
   }
   const spinnerChar = SPINNER_FRAMES[frame % SPINNER_FRAMES.length];
+  const spinnerText = `${spinnerChar} `;
   if (stalledIntensity > 0) {
     const baseColorStr = theme[messageColor];
     const baseRGB = baseColorStr ? parseRGB(baseColorStr) : null;
     if (baseRGB) {
       const interpolated = interpolateColor(baseRGB, ERROR_RED, stalledIntensity);
-      return <Box flexWrap="wrap" height={1} width={2}><Text color={toRGBColor(interpolated)}>{spinnerChar}</Text></Box>;
+      return <Box flexWrap="nowrap" height={1} width={2} flexShrink={0}><Text color={toRGBColor(interpolated)}>{spinnerText}</Text></Box>;
     }
     const color = stalledIntensity > 0.5 ? "error" : messageColor;
     let t4;
-    if ($[3] !== color || $[4] !== spinnerChar) {
-      t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={color}>{spinnerChar}</Text></Box>;
+    if ($[3] !== color || $[4] !== spinnerText) {
+      t4 = <Box flexWrap="nowrap" height={1} width={2} flexShrink={0}><Text color={color}>{spinnerText}</Text></Box>;
       $[3] = color;
-      $[4] = spinnerChar;
+      $[4] = spinnerText;
       $[5] = t4;
     } else {
       t4 = $[5];
@@ -67,10 +69,10 @@ export function SpinnerGlyph(t0) {
     return t4;
   }
   let t4;
-  if ($[6] !== messageColor || $[7] !== spinnerChar) {
-    t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={messageColor}>{spinnerChar}</Text></Box>;
+  if ($[6] !== messageColor || $[7] !== spinnerText) {
+    t4 = <Box flexWrap="nowrap" height={1} width={2} flexShrink={0}><Text color={messageColor}>{spinnerText}</Text></Box>;
     $[6] = messageColor;
-    $[7] = spinnerChar;
+    $[7] = spinnerText;
     $[8] = t4;
   } else {
     t4 = $[8];

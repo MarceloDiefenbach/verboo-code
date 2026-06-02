@@ -26,6 +26,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../../services/analytics/index.js'
+import { clearRouterRateLimit } from '../../services/routerRateLimit.js'
 import {
   getAdditionalModelOptionsCacheScope,
   resolveProviderRequest,
@@ -52,6 +53,7 @@ import { discoverOpenAICompatibleModelOptions } from '../../utils/model/openaiMo
 import {
   getDefaultMainLoopModelSetting,
   isOpus1mMergeEnabled,
+  parseUserSpecifiedModel,
   renderDefaultModelSetting,
 } from '../../utils/model/model.js'
 import { isModelAllowed } from '../../utils/model/modelAllowlist.js'
@@ -89,6 +91,34 @@ function renderModelLabel(model: string | null): string {
     model ?? getDefaultMainLoopModelSetting(),
   )
   return model === null ? `${rendered} (default)` : rendered
+}
+
+function getEffectiveModelForRateLimit(
+  mainLoopModel: string | null,
+  mainLoopModelForSession: string | null,
+): string {
+  return parseUserSpecifiedModel(
+    mainLoopModelForSession ?? mainLoopModel ?? getDefaultMainLoopModelSetting(),
+  )
+}
+
+function clearRouterRateLimitIfModelChanged(
+  currentMainLoopModel: string | null,
+  currentMainLoopModelForSession: string | null,
+  nextMainLoopModel: string | null,
+): void {
+  const currentEffectiveModel = getEffectiveModelForRateLimit(
+    currentMainLoopModel,
+    currentMainLoopModelForSession,
+  )
+  const nextEffectiveModel = getEffectiveModelForRateLimit(
+    nextMainLoopModel,
+    null,
+  )
+
+  if (currentEffectiveModel !== nextEffectiveModel) {
+    clearRouterRateLimit()
+  }
 }
 
 function haveSameModelOptions(left: ModelOption[], right: ModelOption[]): boolean {
@@ -385,6 +415,11 @@ function ModelPickerWrapper({
       to_model: String(model) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
+    clearRouterRateLimitIfModelChanged(
+      mainLoopModel,
+      mainLoopModelForSession,
+      model,
+    )
     setAppState(prev => ({
       ...prev,
       mainLoopModel: model,
@@ -554,6 +589,14 @@ function SetModelAndClose({
   onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }) {
   const isFastMode = useAppState((s: AppState) => s.fastMode)
+  const currentMainLoopModel = useAppState((s: AppState) => s.mainLoopModel)
+  const currentMainLoopModelForSession = useAppState(
+    (s: AppState) => s.mainLoopModelForSession,
+  )
+  const initialModelStateRef = React.useRef({
+    mainLoopModel: currentMainLoopModel,
+    mainLoopModelForSession: currentMainLoopModelForSession,
+  })
   const setAppState = useSetAppState()
   const model = args === 'default' ? null : args
 
@@ -615,6 +658,12 @@ function SetModelAndClose({
     }
 
     function setModel(modelValue: string | null): void {
+      const initialModelState = initialModelStateRef.current
+      clearRouterRateLimitIfModelChanged(
+        initialModelState.mainLoopModel,
+        initialModelState.mainLoopModelForSession,
+        modelValue,
+      )
       setAppState(prev => ({
         ...prev,
         mainLoopModel: modelValue,

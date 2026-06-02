@@ -17,12 +17,12 @@ import type { ToolPermissionContext } from '../../Tool.js';
 import type { Message } from '../../types/message.js';
 import type { PromptInputMode, VimMode } from '../../types/textInputTypes.js';
 import type { AutoUpdaterResult } from '../../utils/autoUpdater.js';
-import { calculateContextPercentages, getContextWindowForModel } from '../../utils/context.js';
+import { getContextWindowForModel } from '../../utils/context.js';
 import { formatNumber } from '../../utils/format.js';
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js';
 import { getRuntimeMainLoopModel } from '../../utils/model/model.js';
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js';
-import { doesMostRecentAssistantMessageExceed200k, getCurrentUsage } from '../../utils/tokens.js';
+import { doesMostRecentAssistantMessageExceed200k, tokenCountWithEstimation } from '../../utils/tokens.js';
 import { isUndercover } from '../../utils/undercover.js';
 import { useTokenRateDetailed } from '../../hooks/useTokenRate.js';
 import { CoordinatorTaskPanel, useCoordinatorTaskCount } from '../CoordinatorAgentStatus.js';
@@ -32,7 +32,7 @@ import { PromptInputFooterLeftSide } from './PromptInputFooterLeftSide.js';
 import { PromptInputFooterSuggestions, type SuggestionItem } from './PromptInputFooterSuggestions.js';
 import { PromptInputHelpMenu } from './PromptInputHelpMenu.js';
 
-const BAR_WIDTH = 20;
+const BAR_WIDTH = 16;
 
 export function ContextWindowDisplay({ messages, permissionMode }: {
   messages: Message[];
@@ -41,39 +41,29 @@ export function ContextWindowDisplay({ messages, permissionMode }: {
   const mainLoopModel = useMainLoopModel();
   const exceeds200k = doesMostRecentAssistantMessageExceed200k(messages);
   const runtimeModel = getRuntimeMainLoopModel({ permissionMode, mainLoopModel, exceeds200kTokens: exceeds200k });
-  const usage = getCurrentUsage(messages);
   const windowSize = getContextWindowForModel(runtimeModel, getSdkBetas());
   const { avgRate10s, isGenerating } = useTokenRateDetailed(messages);
 
-  const emptyBar = '░'.repeat(BAR_WIDTH);
+  const contextTokens = tokenCountWithEstimation(messages);
+  const pct = Math.min(100, Math.max(0, Math.round((contextTokens / windowSize) * 100)));
+  const filled = Math.max(0, Math.min(BAR_WIDTH, Math.round((pct / 100) * BAR_WIDTH)));
+  const bar = '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled);
+  const contextColor = pct >= 90 ? 'red' : pct >= 70 ? 'yellow' : undefined;
+  const rateValue = Math.round(avgRate10s);
+  const showTokenRate = rateValue > 0;
+  const rateColor = isGenerating ? 'success' : undefined;
+  const inputK = formatNumber(contextTokens);
   const windowK = formatNumber(windowSize);
 
-  // Durante streaming, mostra a taxa de tokens/s
-  const rateText = isGenerating ? `${Math.round(avgRate10s)} tok/s` : '0 tok/s';
-  const rateColor = isGenerating ? 'success' : undefined;
-
-  if (!usage) {
-    return (
-      <Box flexDirection="row" gap={2}>
-        <Text dimColor>ctx [{emptyBar}] 0/{windowK}  0%</Text>
-        <Text dimColor color={rateColor}>{rateText}</Text>
-      </Box>
-    );
-  }
-
-  const { used } = calculateContextPercentages(usage, windowSize);
-  const pct = Math.round(used);
-  const filled = Math.round((pct / 100) * BAR_WIDTH);
-  const bar = '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled);
-  const color = pct >= 90 ? 'red' : pct >= 70 ? 'yellow' : undefined;
-  const inputK = formatNumber(usage.input_tokens);
-
   return (
-    <Box flexDirection="row" gap={2}>
-      <Text dimColor color={color}>
-        ctx [{bar}] {inputK}/{windowK}  {pct}%
+    <Box flexDirection="row" gap={1}>
+      <Text color={contextColor} dimColor={contextColor === undefined}>{pct}%</Text>
+      <Text color={contextColor} dimColor={contextColor === undefined}>{bar}</Text>
+      <Text dimColor>
+        {inputK}/{windowK}
       </Text>
-      <Text dimColor color={rateColor}>{rateText}</Text>
+      {showTokenRate && <Text dimColor>·</Text>}
+      {showTokenRate && <Text dimColor={!isGenerating} color={rateColor}>{rateValue} tok/s</Text>}
     </Box>
   );
 }

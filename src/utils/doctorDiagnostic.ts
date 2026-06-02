@@ -476,13 +476,13 @@ async function detectConfigurationIssues(
         // Alias exists but points to invalid target
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias ${getCliBinaryName()}="~/.verboo/local/${getCliBinaryName()}"`,
+          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias ${getCliBinaryName()}="./verboo-code/bin/${getCliBinaryName()}"`,
         })
       } else {
         // No alias exists and not in PATH
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: `Create alias: alias ${getCliBinaryName()}="~/.verboo/local/${getCliBinaryName()}"`,
+          fix: `Create alias: alias ${getCliBinaryName()}="./verboo-code/bin/${getCliBinaryName()}"`,
         })
       }
     }

@@ -2283,11 +2283,9 @@ function PromptInput({
           <Text dimColor>Waiting for permission…</Text>
         </Box>}
       <PromptInputStashNotice hasStash={stashedPrompt !== undefined} />
-      {mode === 'prompt' && !exitMessage.show && !isPasting && (
-        <Box marginTop={1} marginLeft={2}>
-          <ContextWindowDisplay messages={messages} permissionMode={effectiveToolPermissionContext.mode} />
-        </Box>
-      )}
+      <Box marginTop={1} marginLeft={2} height={1} overflow="hidden">
+        {mode === 'prompt' && !exitMessage.show && !isPasting ? <ContextWindowDisplay messages={messages} permissionMode={effectiveToolPermissionContext.mode} /> : <Text> </Text>}
+      </Box>
       {swarmBanner ? <>
           <Text color={swarmBanner.bgColor}>
             {swarmBanner.text ? <>
