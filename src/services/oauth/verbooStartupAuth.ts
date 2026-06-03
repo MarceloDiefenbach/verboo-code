@@ -20,6 +20,7 @@ import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { refreshOAuthToken, storeOAuthAccountInfo } from './client.js'
 import type { OAuthTokens } from './types.js'
+import { showNoModelsFlow } from './purchaseFlow.js'
 
 export type VerbooSessionResult =
   | { kind: 'ok'; tokens: OAuthTokens; refreshed: boolean }
@@ -167,18 +168,25 @@ export async function checkVerbooModels(
 
 async function loadAndCheckModels(accessToken: string): Promise<void> {
   const models = await checkVerbooModels(accessToken)
-  if (models.length === 0) {
-    process.stdout.write(getNoVerbooModelsMessage())
-    // eslint-disable-next-line custom-rules/no-process-exit
-    process.exit(1)
+  if (models.length > 0) return
+  const ok = await showNoModelsFlow(accessToken)
+  if (ok) {
+    // Re-check models after purchase flow
+    const refreshed = await checkVerbooModels(accessToken)
+    if (refreshed.length > 0) return
   }
+  process.stdout.write(
+    '\n  Para trocar de conta, execute: verboo logout\n\n',
+  )
+  // eslint-disable-next-line custom-rules/no-process-exit
+  process.exit(1)
 }
 
 export function getNoVerbooModelsMessage(): string {
   return (
-    '\n❌ Nenhum modelo disponível na sua conta.\n' +
-    '   Compre acesso em: https://code.verboo.ai\n\n' +
-    '   Para trocar de conta, execute: verboo logout\n\n'
+    '\nNenhum modelo disponivel na sua conta.\n' +
+    '  Execute verboo novamente para ver os planos disponiveis.\n\n' +
+    '  Para trocar de conta, execute: verboo logout\n\n'
   )
 }
 

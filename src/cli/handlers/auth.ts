@@ -16,6 +16,7 @@ import {
   installVerbooOAuthTokens,
   preflightVerbooLogin,
 } from '../../services/oauth/verbooStartupAuth.js'
+import { showNoModelsFlow } from '../../services/oauth/purchaseFlow.js'
 import {
   createAndStoreApiKey,
   exchangeCodeForTokensWithUri,
@@ -275,8 +276,8 @@ export async function authLogin({
       await installVerbooOAuthTokens(result)
       const models = await checkVerbooModels(result.accessToken)
       if (models.length === 0) {
-        process.stderr.write(getNoVerbooModelsMessage())
-        process.exit(1)
+        const ok = await showNoModelsFlow(result.accessToken)
+        if (!ok) process.exit(1)
       }
       await preflightVerbooLogin()
     } else {

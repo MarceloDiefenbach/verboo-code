@@ -9,6 +9,7 @@ import {
   markVerbooSessionValidated,
   preflightVerbooLogin,
 } from '../../services/oauth/verbooStartupAuth.js'
+import { PurchaseFlowView } from '../../services/oauth/purchaseFlow.js'
 import { getClaudeAIOAuthTokensAsync } from '../../utils/auth.js'
 import {
   clearTrustedDeviceToken,
@@ -154,6 +155,7 @@ export function Login(props: {
 }): React.ReactNode {
   const mainLoopModel = useMainLoopModel()
   const [preflightDone, setPreflightDone] = React.useState(!isVerbooMode())
+  const [postLoginToken, setPostLoginToken] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (!isVerbooMode()) return
@@ -178,8 +180,61 @@ export function Login(props: {
     }
   }, [mainLoopModel, props])
 
+  const handleOAuthDone = React.useCallback(
+    async (result: ConsoleOAuthFlowResult | null) => {
+      if (!result) {
+        props.onDone({ type: 'cancel' }, mainLoopModel)
+        return
+      }
+
+      if (isVerbooMode()) {
+        markVerbooSessionValidated()
+        const storedTokens = await getClaudeAIOAuthTokensAsync()
+        if (storedTokens?.accessToken) {
+          const models = await checkVerbooModels(storedTokens.accessToken)
+          if (models.length === 0) {
+            setPostLoginToken(storedTokens.accessToken)
+            return
+          }
+        }
+      }
+
+      props.onDone(result ?? { type: 'cancel' }, mainLoopModel)
+    },
+    [mainLoopModel, props],
+  )
+
+  const handlePurchaseDone = React.useCallback(
+    async (success: boolean) => {
+      if (success && postLoginToken) {
+        const models = await checkVerbooModels(postLoginToken)
+        if (models.length > 0) {
+          props.onDone({ type: 'ready', refreshed: true }, mainLoopModel)
+          return
+        }
+      }
+      props.onDone({ type: 'cancel' }, mainLoopModel)
+    },
+    [postLoginToken, mainLoopModel, props],
+  )
+
   if (!preflightDone) {
     return <Text>Validando sessão Verboo…</Text>
+  }
+
+  if (postLoginToken) {
+    return (
+      <Dialog
+        title="Planos Disponiveis"
+        onCancel={() => props.onDone({ type: 'cancel' }, mainLoopModel)}
+        color="permission"
+      >
+        <PurchaseFlowView
+          accessToken={postLoginToken}
+          onDone={handlePurchaseDone}
+        />
+      </Dialog>
+    )
   }
 
   return (
@@ -201,9 +256,7 @@ export function Login(props: {
       }
     >
       <ConsoleOAuthFlow
-        onDone={result =>
-          props.onDone(result ?? { type: 'cancel' }, mainLoopModel)
-        }
+        onDone={handleOAuthDone}
         startingMessage={props.startingMessage}
       />
     </Dialog>
