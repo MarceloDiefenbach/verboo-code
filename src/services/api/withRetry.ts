@@ -7,7 +7,9 @@ import {
 } from '@anthropic-ai/sdk'
 import type { QuerySource } from 'src/constants/querySource.js'
 import type { SystemAPIErrorMessage } from 'src/types/message.js'
+import { isVerbooMode } from '../../constants/oauth.js'
 import { isAwsCredentialsProviderError } from 'src/utils/aws.js'
+
 import { logForDebugging } from 'src/utils/debug.js'
 import { logError } from 'src/utils/log.js'
 import { createSystemAPIErrorMessage } from 'src/utils/messages.js'
@@ -784,9 +786,10 @@ function shouldRetry(error: APIError): boolean {
 
   // Retry on rate limits, but not for ClaudeAI Subscription users
   // Enterprise users can retry because they typically use PAYG instead of rate limits
+  // Verboo users retry because 429 can be a transient rate limit, not quota exhaustion
   if (error.status === 429) {
     if (isQuotaExhausted(error)) return false
-    return !isClaudeAISubscriber() || isEnterpriseSubscriber()
+    return isVerbooMode() || !isClaudeAISubscriber() || isEnterpriseSubscriber()
   }
 
   // Clear API key cache on 401 and allow retry.
